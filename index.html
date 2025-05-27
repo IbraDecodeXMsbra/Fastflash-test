@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -25,14 +26,32 @@
     transition: opacity 0.5s ease;
   }
   
-  .loading-spinner-large {
-    border: 5px solid rgba(255, 255, 255, 0.2);
-    border-top: 5px solid #00cea8;
-    border-radius: 50%;
-    width: 60px;
-    height: 60px;
-    animation: pulse 1.5s ease-in-out infinite;
+  .fastflash-loader {
+    position: relative;
+    width: 100px;
+    height: 100px;
     margin-bottom: 20px;
+  }
+  
+  .fastflash-loader .bolt {
+    position: absolute;
+    font-size: 60px;
+    color: #fff;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: boltPulse 1.5s ease-in-out infinite;
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.7);
+  }
+  
+  .fastflash-loader .circle {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 5px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1.5s linear infinite;
   }
   
   .loading-text {
@@ -44,6 +63,7 @@
     text-shadow: 0 2px 10px rgba(0,0,0,0.3);
     position: relative;
     padding-bottom: 10px;
+    animation: textGlow 2s ease-in-out infinite alternate;
   }
 
   .loading-text::after {
@@ -56,6 +76,7 @@
     height: 3px;
     background: white;
     border-radius: 3px;
+    animation: linePulse 2s ease-in-out infinite;
   }
 
   .loading-subtext {
@@ -119,9 +140,24 @@
     to { opacity: 1; }
   }
 
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); opacity: 0.8; }
-    50% { transform: scale(1.1); opacity: 1; }
+  @keyframes boltPulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+    50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  @keyframes textGlow {
+    0% { text-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
+    100% { text-shadow: 0 0 20px rgba(255, 255, 255, 0.8); }
+  }
+  
+  @keyframes linePulse {
+    0%, 100% { width: 100px; }
+    50% { width: 150px; }
   }
 
   .d-none {
@@ -240,7 +276,7 @@
     border-radius: 50%;
     width: 40px;
     height: 40px;
-    animation: pulse 1.5s ease-in-out infinite;
+    animation: spin 1s linear infinite;
   }
 
   /* ===== Title Styles ===== */
@@ -747,29 +783,43 @@
   .notification {
     position: fixed;
     top: 20px;
-    right: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
     padding: 1rem 1.5rem;
     border-radius: 10px;
     color: white;
     font-weight: 600;
     z-index: 1000;
-    transform: translateX(400px);
-    transition: transform 0.3s ease;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
+    max-width: 90%;
+    width: fit-content;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
 
   .notification.show {
-    transform: translateX(0);
+    transform: translateX(-50%) translateY(0);
   }
 
   .notification.success {
-    background: rgba(0, 206, 168, 0.8);
+    background: rgba(0, 206, 168, 0.9);
   }
 
   .notification.error {
-    background: rgba(231, 76, 60, 0.8);
+    background: rgba(231, 76, 60, 0.9);
+  }
+  
+  .notification.warning {
+    background: rgba(243, 156, 18, 0.9);
+  }
+  
+  .notification i {
+    font-size: 1.2rem;
   }
 
   /* ===== Responsive ===== */
@@ -811,13 +861,21 @@
     .modal-dialog {
       padding: 1.5rem;
     }
+    
+    .notification {
+      padding: 0.8rem 1rem;
+      font-size: 0.9rem;
+    }
   }
   </style>
 </head>
 <body>
   <!-- Loading Screen -->
   <div id="loading-screen">
-    <div class="loading-spinner-large"></div>
+    <div class="fastflash-loader">
+      <div class="circle"></div>
+      <div class="bolt"><i class="fas fa-bolt"></i></div>
+    </div>
     <div class="loading-text">⚡ Fast Flash</div>
     <div class="loading-subtext">Loading API Documentation...</div>
   </div>
@@ -950,7 +1008,7 @@
     
     setTimeout(() => {
       notification.classList.remove('show');
-      setTimeout(() => document.body.removeChild(notification), 300);
+      setTimeout(() => document.body.removeChild(notification), 500);
     }, 3000);
     
     playSound(type);
@@ -981,8 +1039,7 @@
   document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('.container').style.display = 'none';
     document.querySelector('footer').style.display = 'none';
-    
-    loadSettings().then(() => {
+        loadSettings().then(() => {
       setTimeout(() => {
         document.getElementById('loading-screen').style.opacity = '0';
         setTimeout(() => {
@@ -1140,7 +1197,7 @@
         } else {
           fetchAPI(endpoint);
         }
-        
+
         modal.classList.add("active");
         document.querySelector(".copy-section").classList.add("active");
         document.getElementById("copyEndpointText").innerText = window.location.origin + endpoint;
@@ -1157,7 +1214,7 @@
           }, 2000);
         });
       }
-      
+
       if (e.target.id === "btn-close" || e.target === document.getElementById("apiResponseModal")) {
         document.getElementById("apiResponseModal").classList.remove("active");
       }
@@ -1166,7 +1223,7 @@
     document.getElementById("submitParamBtn").addEventListener("click", () => {
       const form = document.getElementById("paramForm");
       const submitBtn = document.getElementById("submitParamBtn");
-      
+
       if (!form.checkValidity()) {
         form.reportValidity();
         return;
@@ -1175,15 +1232,15 @@
       form.style.display = "none";
       submitBtn.style.display = "none";
       document.getElementById("apiResponseLoading").style.display = "block";
-      
+
       let endpoint = currentEndpoint.split("?")[0] + "?";
       const inputs = form.querySelectorAll("input");
-      
+
       inputs.forEach((input, index) => {
         endpoint += `${input.name}=${encodeURIComponent(input.value)}`;
         if (index < inputs.length - 1) endpoint += "&";
       });
-      
+
       fetchAPI(endpoint);
     });
   }    
@@ -1249,7 +1306,7 @@
         showNotification('API request failed!', 'error');
       });
   }
-  
+
   fetch('/api/status')
     .then(res => res.json())
     .then(data => {
@@ -1264,3 +1321,4 @@
 </script>
 </body>
 </html>
+   
