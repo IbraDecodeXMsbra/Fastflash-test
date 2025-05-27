@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -1039,13 +1038,20 @@
   document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('.container').style.display = 'none';
     document.querySelector('footer').style.display = 'none';
-        loadSettings().then(() => {
+    
+    // Show loading state for stats
+    document.querySelectorAll('#status-boxes p').forEach(el => {
+      el.innerHTML = '<div class="loading-spinner" style="width: 30px; height: 30px; margin: 0 auto;"></div>';
+    });
+    
+    loadSettings().then(() => {
       setTimeout(() => {
         document.getElementById('loading-screen').style.opacity = '0';
         setTimeout(() => {
           document.getElementById('loading-screen').style.display = 'none';
           document.querySelector('.container').style.display = 'block';
           document.querySelector('footer').style.display = 'block';
+          showNotification('Fast Flash API is ready!', 'success');
         }, 500);
       }, 2000);
     });
@@ -1057,192 +1063,209 @@
     let currentEndpoint = "";
     let allAPIs = {};
 
-    const settings = await fetch("/settings.json").then(res => res.json());
-    const apis = await fetch("/api/endpoints.json").then(res => res.json());
-    allAPIs = apis;
+    try {
+      const [settings, apis] = await Promise.all([
+        fetch("/settings.json").then(res => res.json()),
+        fetch("/api/endpoints.json").then(res => res.json())
+      ]);
+      
+      allAPIs = apis;
 
-    document.getElementById("searchInput").addEventListener("input", function () {
-      const query = this.value.toLowerCase();
-      const matchedAPIs = {};
+      document.getElementById("searchInput").addEventListener("input", function () {
+        const query = this.value.toLowerCase();
+        const matchedAPIs = {};
 
-      Object.keys(allAPIs).forEach(category => {
-        const filtered = allAPIs[category].filter(api =>
-          api.name.toLowerCase().includes(query) ||
-          (api.desc && api.desc.toLowerCase().includes(query)) ||
-          api.path.toLowerCase().includes(query)
-        );
-        if (filtered.length) matchedAPIs[category] = filtered;
-      });
-
-      renderSearchResults(matchedAPIs);
-    });
-
-    const setContent = (id, property, value) => {
-      const el = document.getElementById(id);
-      if (el) el[property] = value;
-    };
-
-    setContent("page", "textContent", "" + settings.apititle || "Restapi - Fast Flash");
-    setContent("apiTitle", "textContent", settings.apititle || "Fast Flash API");
-
-    document.getElementById("githubLink").href = settings.github || "#";
-    document.getElementById("whatsappLink").href = settings.whatsapp || "#";
-    document.getElementById("youtubeLink").href = settings.youtube || "#";
-    document.getElementById("information").href = settings.saluran || "#";
-    document.getElementById("contactdev").href = settings.whatsapp || "#";
-
-    Object.keys(apis).forEach((key, index) => {
-      const button = document.createElement("button");
-      button.className = `tab ${index === 0 ? "active" : ""}`;
-      button.dataset.tab = key;
-      button.innerText = key.charAt(0).toUpperCase() + key.slice(1);
-      tabsContainer.appendChild(button);
-    });
-
-    function renderSearchResults(results) {
-      apiList.innerHTML = "";
-
-      Object.keys(results).forEach(category => {
-        const categoryHeader = document.createElement("h2");
-        categoryHeader.textContent = category;
-        apiList.appendChild(categoryHeader);
-
-        results[category].forEach((api, i) => {
-          const card = createApiCard(api, i);
-          apiList.appendChild(card);
+        Object.keys(allAPIs).forEach(category => {
+          const filtered = allAPIs[category].filter(api =>
+            api.name.toLowerCase().includes(query) ||
+            (api.desc && api.desc.toLowerCase().includes(query)) ||
+            api.path.toLowerCase().includes(query)
+          );
+          if (filtered.length) matchedAPIs[category] = filtered;
         });
+
+        renderSearchResults(matchedAPIs);
       });
-    }
 
-    function createApiCard(api, index) {
-      const card = document.createElement("div");
-      card.className = "api-card";
+      const setContent = (id, property, value) => {
+        const el = document.getElementById(id);
+        if (el) el[property] = value;
+      };
 
-      let statusClass = "";
-      if (api.status.toLowerCase().includes("maintenance")) statusClass = "danger";
-      else if (api.status.toLowerCase().includes("beta")) statusClass = "warning";
+      setContent("page", "textContent", "" + settings.apititle || "Restapi - Fast Flash");
+      setContent("apiTitle", "textContent", settings.apititle || "Fast Flash API");
 
-      card.innerHTML = `
-        <div class="api-info">
-          <h3>${api.name}</h3>
-          ${api.desc ? `<p>${api.desc}</p>` : ""}
-          <span class="status ${statusClass}">${api.status}</span>
-        </div>
-        <button class="play-button" data-endpoint="${api.path}" data-api="${api.name}" data-desc="${api.desc}">
-          <i class="fa-solid fa-play"></i> Try API
-        </button>
-      `;
+      document.getElementById("githubLink").href = settings.github || "#";
+      document.getElementById("whatsappLink").href = settings.whatsapp || "#";
+      document.getElementById("youtubeLink").href = settings.youtube || "#";
+      document.getElementById("information").href = settings.saluran || "#";
+      document.getElementById("contactdev").href = settings.whatsapp || "#";
 
-      setTimeout(() => {
-        card.style.animation = `cardEntrance 0.6s ease-out ${index * 0.1}s forwards`;
-      }, 10);
-
-      return card;
-    }
-
-    function renderAPIs(category) {
-      apiList.innerHTML = "";
-      apis[category].sort((a, b) => a.name.localeCompare(b.name)).forEach((api, i) => {
-        const card = createApiCard(api, i);
-        apiList.appendChild(card);
+      Object.keys(apis).forEach((key, index) => {
+        const button = document.createElement("button");
+        button.className = `tab ${index === 0 ? "active" : ""}`;
+        button.dataset.tab = key;
+        button.innerText = key.charAt(0).toUpperCase() + key.slice(1);
+        tabsContainer.appendChild(button);
       });
-    }
 
-    renderAPIs(Object.keys(apis)[0]);
+      function renderSearchResults(results) {
+        apiList.innerHTML = "";
 
-    tabsContainer.addEventListener("click", (e) => {
-      if (e.target.classList.contains("tab")) {
-        document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
-        e.target.classList.add("active");
-        renderAPIs(e.target.dataset.tab);
-      }
-    });
+        Object.keys(results).forEach(category => {
+          const categoryHeader = document.createElement("h2");
+          categoryHeader.textContent = category;
+          apiList.appendChild(categoryHeader);
 
-    document.addEventListener("click", (e) => {
-      if (e.target.closest(".play-button")) {
-        const btn = e.target.closest(".play-button");
-        const endpoint = btn.getAttribute("data-endpoint");
-        const api = btn.getAttribute("data-api");
-        const desc = btn.getAttribute("data-desc");
-
-        const paramForm = document.getElementById("paramForm");
-        const submitBtn = document.getElementById("submitParamBtn");
-        const modal = document.getElementById("apiResponseModal");
-
-        document.getElementById("apiResponseContent").textContent = "";
-        document.getElementById("apiResponseContent").classList.add("d-none");
-        document.getElementById("apiResponseLoading").style.display = "none";
-        paramForm.style.display = "block";
-        submitBtn.style.display = "none";
-
-        currentEndpoint = endpoint;
-        paramForm.innerHTML = "";
-
-        document.querySelector(".modal-dialog h5").innerText = api;
-        document.querySelector(".modal-dialog span").innerText = desc;
-
-        if (endpoint.includes("?")) {
-          const queryParams = endpoint.split("?")[1].split("&");
-
-          queryParams.forEach(param => {
-            const [key, value] = param.split("=");
-            paramForm.innerHTML += `
-              <label for="${key}">${key.charAt(0).toUpperCase() + key.slice(1)}:</label>
-              <input type="text" id="${key}" name="${key}" value="${value || ''}" 
-                     placeholder="Enter ${key}" required />
-            `;
+          results[category].forEach((api, i) => {
+            const card = createApiCard(api, i);
+            apiList.appendChild(card);
           });
+        });
+      }
 
-          submitBtn.style.display = "block";
-        } else {
-          fetchAPI(endpoint);
+      function createApiCard(api, index) {
+        const card = document.createElement("div");
+        card.className = "api-card";
+
+        let statusClass = "";
+        if (api.status.toLowerCase().includes("maintenance")) statusClass = "danger";
+        else if (api.status.toLowerCase().includes("beta")) statusClass = "warning";
+
+        card.innerHTML = `
+          <div class="api-info">
+            <h3>${api.name}</h3>
+            ${api.desc ? `<p>${api.desc}</p>` : ""}
+            <span class="status ${statusClass}">${api.status}</span>
+          </div>
+          <button class="play-button" data-endpoint="${api.path}" data-api="${api.name}" data-desc="${api.desc}">
+            <i class="fa-solid fa-play"></i> Try API
+          </button>
+        `;
+
+        setTimeout(() => {
+          card.style.animation = `cardEntrance 0.6s ease-out ${index * 0.1}s forwards`;
+        }, 10);
+
+        return card;
+      }
+
+      function renderAPIs(category) {
+        apiList.innerHTML = "";
+        const loadingPlaceholder = document.createElement('div');
+        loadingPlaceholder.className = 'loading-spinner';
+        loadingPlaceholder.style.margin = '2rem auto';
+        apiList.appendChild(loadingPlaceholder);
+        
+        setTimeout(() => {
+          apiList.innerHTML = "";
+          apis[category].sort((a, b) => a.name.localeCompare(b.name)).forEach((api, i) => {
+            const card = createApiCard(api, i);
+            apiList.appendChild(card);
+          });
+        }, 300);
+      }
+
+      renderAPIs(Object.keys(apis)[0]);
+
+      tabsContainer.addEventListener("click", (e) => {
+        if (e.target.classList.contains("tab")) {
+          document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
+          e.target.classList.add("active");
+          renderAPIs(e.target.dataset.tab);
+        }
+      });
+
+      document.addEventListener("click", (e) => {
+        if (e.target.closest(".play-button")) {
+          const btn = e.target.closest(".play-button");
+          const endpoint = btn.getAttribute("data-endpoint");
+          const api = btn.getAttribute("data-api");
+          const desc = btn.getAttribute("data-desc");
+
+          const paramForm = document.getElementById("paramForm");
+          const submitBtn = document.getElementById("submitParamBtn");
+          const modal = document.getElementById("apiResponseModal");
+
+          document.getElementById("apiResponseContent").textContent = "";
+          document.getElementById("apiResponseContent").classList.add("d-none");
+          document.getElementById("apiResponseLoading").style.display = "none";
+          paramForm.style.display = "block";
+          submitBtn.style.display = "none";
+
+          currentEndpoint = endpoint;
+          paramForm.innerHTML = "";
+
+          document.querySelector(".modal-dialog h5").innerText = api;
+          document.querySelector(".modal-dialog span").innerText = desc;
+
+          if (endpoint.includes("?")) {
+            const queryParams = endpoint.split("?")[1].split("&");
+
+            queryParams.forEach(param => {
+              const [key, value] = param.split("=");
+              paramForm.innerHTML += `
+                <label for="${key}">${key.charAt(0).toUpperCase() + key.slice(1)}:</label>
+                <input type="text" id="${key}" name="${key}" value="${value || ''}" 
+                       placeholder="Enter ${key}" required />
+              `;
+            });
+
+            submitBtn.style.display = "block";
+          } else {
+            fetchAPI(endpoint);
+          }
+          
+          modal.classList.add("active");
+          document.querySelector(".copy-section").classList.add("active");
+          document.getElementById("copyEndpointText").innerText = window.location.origin + endpoint;
         }
 
-        modal.classList.add("active");
-        document.querySelector(".copy-section").classList.add("active");
-        document.getElementById("copyEndpointText").innerText = window.location.origin + endpoint;
-      }
-
-      if (e.target.closest(".copy-button")) {
-        const textToCopy = document.getElementById("copyEndpointText").innerText;
-        navigator.clipboard.writeText(textToCopy).then(() => {
-          const copyBtn = e.target.closest(".copy-button");
-          copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-          showNotification('URL copied to clipboard!', 'success');
-          setTimeout(() => {
-            copyBtn.innerHTML = '<i class="far fa-copy"></i> Copy';
-          }, 2000);
-        });
-      }
-
-      if (e.target.id === "btn-close" || e.target === document.getElementById("apiResponseModal")) {
-        document.getElementById("apiResponseModal").classList.remove("active");
-      }
-    });
-
-    document.getElementById("submitParamBtn").addEventListener("click", () => {
-      const form = document.getElementById("paramForm");
-      const submitBtn = document.getElementById("submitParamBtn");
-
-      if (!form.checkValidity()) {
-        form.reportValidity();
-        return;
-      }
-
-      form.style.display = "none";
-      submitBtn.style.display = "none";
-      document.getElementById("apiResponseLoading").style.display = "block";
-
-      let endpoint = currentEndpoint.split("?")[0] + "?";
-      const inputs = form.querySelectorAll("input");
-
-      inputs.forEach((input, index) => {
-        endpoint += `${input.name}=${encodeURIComponent(input.value)}`;
-        if (index < inputs.length - 1) endpoint += "&";
+        if (e.target.closest(".copy-button")) {
+          const textToCopy = document.getElementById("copyEndpointText").innerText;
+          navigator.clipboard.writeText(textToCopy).then(() => {
+            const copyBtn = e.target.closest(".copy-button");
+            copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+            showNotification('URL copied to clipboard!', 'success');
+            setTimeout(() => {
+              copyBtn.innerHTML = '<i class="far fa-copy"></i> Copy';
+            }, 2000);
+          });
+        }
+        
+        if (e.target.id === "btn-close" || e.target === document.getElementById("apiResponseModal")) {
+          document.getElementById("apiResponseModal").classList.remove("active");
+        }
       });
 
-      fetchAPI(endpoint);
-    });
+      document.getElementById("submitParamBtn").addEventListener("click", () => {
+        const form = document.getElementById("paramForm");
+        const submitBtn = document.getElementById("submitParamBtn");
+        
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          showNotification('Please fill all required fields!', 'warning');
+          return;
+        }
+
+        form.style.display = "none";
+        submitBtn.style.display = "none";
+        document.getElementById("apiResponseLoading").style.display = "block";
+        
+        let endpoint = currentEndpoint.split("?")[0] + "?";
+        const inputs = form.querySelectorAll("input");
+        
+        inputs.forEach((input, index) => {
+          endpoint += `${input.name}=${encodeURIComponent(input.value)}`;
+          if (index < inputs.length - 1) endpoint += "&";
+        });
+        
+        fetchAPI(endpoint);
+      });
+    } catch (error) {
+      console.error("Failed to load settings:", error);
+      showNotification('Failed to load API data!', 'error');
+    }
   }    
 
   function fetchAPI(endpoint) {
@@ -1256,6 +1279,8 @@
     responseEl.innerHTML = "";
     urlsSection.classList.add("active");
     document.getElementById("copyEndpointText").innerText = fullURL;
+    
+    showNotification('Processing your request...', 'success');
 
     fetch(fullURL)
       .then(async (res) => {
@@ -1306,19 +1331,33 @@
         showNotification('API request failed!', 'error');
       });
   }
-
-  fetch('/api/status')
-    .then(res => res.json())
-    .then(data => {
-      document.getElementById('total-endpoint').textContent = data.result.totalfitur;
-      document.getElementById('total-request').textContent = data.result.totalrequest;
-    })
-    .catch(err => {
-      document.getElementById('total-endpoint').textContent = 'Error';
-      document.getElementById('total-request').textContent = 'Error';
-      console.error(err);
-    });
+  
+  // Load stats with loading state
+  (function loadStats() {
+    const statsLoading = document.createElement('div');
+    statsLoading.className = 'loading-spinner';
+    statsLoading.style.width = '30px';
+    statsLoading.style.height = '30px';
+    statsLoading.style.margin = '0 auto';
+    
+    document.getElementById('total-endpoint').innerHTML = '';
+    document.getElementById('total-endpoint').appendChild(statsLoading.cloneNode());
+    
+    document.getElementById('total-request').innerHTML = '';
+    document.getElementById('total-request').appendChild(statsLoading.cloneNode());
+    
+    fetch('/api/status')
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('total-endpoint').textContent = data.result.totalfitur;
+        document.getElementById('total-request').textContent = data.result.totalrequest;
+      })
+      .catch(err => {
+        document.getElementById('total-endpoint').textContent = 'Error';
+        document.getElementById('total-request').textContent = 'Error';
+        console.error(err);
+      });
+  })();
 </script>
 </body>
 </html>
-   
